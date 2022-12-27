@@ -1,10 +1,10 @@
 # Fetch Rewards #
-## Data Engineering Take Home: ETL off a SQS Qeueue ##
+## Data Engineering Take Home: ETL off a SQS Queue ##
 
 You may use any programming language to complete this exercise. We strongly encourage you to write a README to explain how to run your application and summarize your thought process.
 
 ## What do I need to do?
-This challenge will focus on your ability to write a small application that can read from an AWS SQS Qeueue, transform that data, then write to a Postgres database. This project includes steps for using docker to run all the components locally, **you do not need an AWS account to do this take home.**
+This challenge will focus on your ability to write a small application that can read from an AWS SQS Queue, transform that data, then write to a Postgres database. This project includes steps for using docker to run all the components locally, **you do not need an AWS account to do this take home.**
 
 Your objective is to read JSON data containing user login behavior from an AWS SQS Queue that is made available via [localstack](https://github.com/localstack/localstack). Fetch wants to hide personal identifiable information (PII). The fields `device_id` and `ip` should be masked, but in a way where it is easy for data analysts to identify duplicate values in those fields.
 
