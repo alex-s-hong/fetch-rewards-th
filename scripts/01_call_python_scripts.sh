@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "downloding localstack dependency"
+echo "downloading localstack dependency"
 pip install localstack-client
 
 echo  "starting python script"
