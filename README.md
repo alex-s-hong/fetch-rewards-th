@@ -43,47 +43,47 @@ For this assignment an ounce of communication and organization is worth a pound 
 
 ## Explanation and How to Start 
 
-I have created a simple script to process the input from AWS SQS then save into the Postgres database. The task has a number of things that I should make decision. Considering the recommended time to spend on this take home task (2-3 hours),
+I have created a simple script to process the input from AWS SQS and then save it into the Postgres database. The task has a number of things that I should make decisions about. Considering the recommended time to spend on this take-home task (2-3 hours),
 I created a simple script to perform the requirements. I will discuss what can be enhanced given much time or deployed to production (which requires scaling up).
 
 #### Decisions during development
-Out of the process, the first thing to do was how I should read the message from the AWS SQS Queue. As I decided to use Python for processing the data, I decided to use the AWS SDK, as similar as we write them to the queue.
+Out of the process, the first thing to do was how I should read the message from the AWS SQS Queue. As I decided to use Python for processing the data, I decided to use the AWS SDK, as similar to we write them to the queue.
 
-When we receive the message, it is given in json format. In order to flatten and process the data in Python, it is stored in dictionary type.
+When we receive the message, it is given in json format. In order to flatten and process the data in Python, it is stored in a dictionary type.
 
-I used python's default hash library to mask personal identifiable information (PII). Out of multiple options, I used SHA-256 as it encryptes the value in 256 bit so it's less likely to cause hash collision and much secure, which enables
+I used python's default hash library to mask personal identifiable information (PII). Out of multiple options, I used SHA-256 as it encrypts the value in 256 bits so it's less likely to cause hash collisions and much more secure, which enables
 duplication detection. Although the performance is slower than other simpler encryption such as MD5 or SHA-128, the effect is very limited.
-The encryption is one-way hash and it's very difficult to recover the PII later. However, if it is necessary to recover the PII, we can consider using two-way hash (encryption and decryption) by importing module like [simple-crypt](https://pypi.org/project/simple-crypt/).
+The encryption is a one-way hash and it's very difficult to recover the PII later. However, if it is necessary to recover the PII, we can consider using a two-way hash (encryption and decryption) by importing module like [simple-crypt](https://pypi.org/project/simple-crypt/).
 
-My strategy to connect to Postgres was 'make it simple'. Personally, I prefer to make a minimal product meets the requirement because it's easier to maintain and cost-effeicient. Thus, I decided to use [psycopg2](https://pypi.org/project/psycopg2/) for connection and insertion.
-If the project scales up with larger data stream and additional requirements, I would consider creating a flask app with [SQL Alchemy](https://www.sqlalchemy.org/) for better maintenance.
+My strategy to connect to Postgres was 'make it simple'. Personally, I prefer to make a minimal product that meets the requirement because it's easier to maintain and cost-efficient. Thus, I decided to use [psycopg2](https://pypi.org/project/psycopg2/) for connection and insertion.
+If the project scales up with a larger data stream and additional requirements, I would consider creating a flask app with [SQL Alchemy](https://www.sqlalchemy.org/) for better maintenance.
 
-I placed my script along with other python scripts but I didn't include it in the docker image. If the user wants to do the process, the user can simply run the script by run the command `python script/read_and_write_to_db.py` at project's root.
+I placed my script along with other python scripts but I didn't include it in the docker image. If the user wants to do the process, the user can simply run the script by running the command `python script/read_and_write_to_db.py` at the project's root.
 
-### Answers for the questions
+### Answers to the questions
 
 1. How would you deploy this application in production?
 
--> It depends by the case but if we don't expect a lot of datastream, we can use my script without modification and run it periodically (i.e. by running a cron job).
+-> It depends on the case but if we don't expect a lot of datastreams, we can use my script without modification and run it periodically (i.e. by running a cron job).
 ```
 # make/edit a crontab
 crontab -e
 
-# inside the vim editor, include the script to run with schedule (in this example, every 5 minute)
+# inside the vim editor, include the script to run with schedule (in this example, every 5 minutes)
 # you should edit the path of your python and your script's location
 */5 * * * * /usr/local/bin/python /Users/{your_name}/fetch-rewards-th/scripts/read_and_write_to_db.py
 ```
-The script can be placed in the same docker image or separate docker, then placed to EC2 instance on AWS. However, as I said, it depends by the future requirement.
-If we are planning to add more features (i.e. different queries on database), we can create an object relational mapping (ORM) in a microservice.
+The script can be placed in the same docker image or separate docker, then placed in EC2 instance on AWS. However, as I said, it depends on the future requirement.
+If we are planning to add more features (i.e. different queries on database), we can create an object-relational mapping (ORM) in a microservice.
 
 
 2. What other components would you want to add to make this production ready?
 
--> The first thing I would add is validator of the input. Even in given small dataset, there was one invalid input (with 'foo', 'bar' keys). I would improve the validator to filter out those invalid messages.
+-> The first thing I would add is the validator of the input. Even in the given small dataset, there was one invalid input (with 'foo', 'bar' keys). I would improve the validator to filter out those invalid messages.
 
 Moreover, database connection cannot always be guaranteed in real life. In other words, we should expect there can be a glitch anytime. In order to prevent the situation, I would create a class for DB and include `retries` parameters.
 
-Example code snippet is as follows:
+An example code snippet is as follows:
 
 ```python
 
@@ -120,27 +120,26 @@ class DB():
 
 ```
 
-Another thing I would do before deploying it to the production, hide the credentials. The credentials including password is exposed and it is wrong practice. 
-One way is save those variables in environment and access them by calling `os.getenv(key)`.
+Another thing I would do before deploying it to the production is hide the credentials. The credentials including the password are exposed and it is a wrong practice. 
+One way is to save those variables in the environment and access them by calling `os.getenv(key)`.
 
 3. How can this application scale with a growing data set.
 
 When we have more data coming in, we need more workers. One way is adopting multithreading, and the other way is adding more worker nodes (multi-processing).
 
 Of course, we can adjust the number of messages per response or frequency in cron as well. However, at some point, we might encounter the limit and we need to 
-find new ways. We can use multithreading by simply import the multi-thread module and slightly change the job for each thread. For multi-processing, we can put
-the job into a docker and spawn on the Kubernetes.
+find new ways. We can use multithreading by simply importing the multi-thread module and slightly changing the job for each thread. For multi-processing, we can put
+the job into a docker and spawn on Kubernetes.
 
-Either we use multi-thread or multi-process, we should be cautious on handling AWS SQS. We should config `visiblity timeout`, a period of time during which SQS prevents
-other consuming components from receiving and processing the message, to be sufficient for each thread/process to handle and not resulting in duplicate rows in DB.
+Whether we use multi-thread or multi-process, we should be cautious about handling AWS SQS. We should config `visibility timeout`, a period of time during which SQS prevents
+other consuming components from receiving and processing the message, to be sufficient for each thread/process to handle and not result in duplicate rows in DB.
 
 
 4. How can PII be recovered later on?
 
-Current implementation cannot recover the PII as I adopt the one-way hash. However, it is feasible by changing the encrypt module to two-way hashing module.
-What we should be careful is we should store and maintain the secret key for encryption and decryption.
-Example as follows,
-
+The current implementation cannot recover the PII as I adopt the one-way hash. However, it is feasible by changing the encrypt module to a two-way hashing module.
+What we should be careful of is we should store and maintain the secret key for encryption and decryption.
+Example is as follows,
 ```python
     import os
     from simplecrypt import encrypt
